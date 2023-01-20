@@ -86,12 +86,11 @@ impl FlowTable {
             if left.output != right.output {
                 matrix.set_incompatible(first_row, second_row)
             } else {
-                if left.output.is_dont_care() || right.output.is_dont_care() ||
-                   left.to.is_dont_care() || right.to.is_dont_care() {
+                if left.to.is_dont_care() || right.to.is_dont_care() {
                     continue;
                 }
 
-                if left.output.unwrap() == left.output.unwrap() && left.to.unwrap() != right.to.unwrap() {
+                if left.to.unwrap() != right.to.unwrap() {
                     matrix.add_pair(first_row, second_row, (left.to.unwrap(), right.to.unwrap()))
                 }
             }
@@ -107,7 +106,8 @@ impl FlowTable {
             }
         }
         
-        dbg!(matrix);
+        let c_list = matrix.to_c_list();
+        matrix = dbg!(matrix);
         todo!()
     }
 }
@@ -132,6 +132,10 @@ impl Display for FlowTable {
                 write!(f, "| {},{} ", self.entries[state * self.num_inputs + i].to, self.entries[state * self.num_inputs + i].output)?;
             }
             writeln!(f)?;
+
+            if state == self.num_states - 1 {
+                break;
+            }
             
             write!(f, "-----+")?;
             for _ in 0..self.num_inputs {

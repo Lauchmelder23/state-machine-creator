@@ -1,3 +1,7 @@
+use std::thread::current;
+
+use crate::flowtable::FlowTableValue;
+
 #[derive(Debug, Clone)]
 enum Entry {
     Incompatible,
@@ -29,9 +33,15 @@ impl StateMatrix {
     pub fn add_pair(&mut self, first: usize, second: usize, pair: (usize, usize)) {
         let index = second * (second - 1) / 2 + first;
         
+        let ordered_pair = if pair.0 > pair.1 {(pair.1, pair.0)} else {pair};
+
         match &mut self.entries[index] {
             Entry::Implications(pairs) => {
-                pairs.push(pair);
+                if pairs.contains(&ordered_pair) {
+                    return;
+                }
+
+                pairs.push(ordered_pair);
                 return;
             },
 
@@ -45,5 +55,55 @@ impl StateMatrix {
         let index = second * (second - 1) / 2 + first;
 
         self.entries[index] = Entry::Incompatible;
+    }
+
+    fn propagate_incompatibility(&mut self, pair: (usize, usize)) {
+        self.entries[pair.1 * (pair.1 - 1) / 2 + pair.0] = Entry::Incompatible; 
+
+        let mut incompatible_pairs: Vec<(usize, usize)> = vec![];        
+
+        let mut current_pair = (0, 1);
+        for entry in &self.entries {
+            match entry {
+                Entry::Incompatible => {},
+                Entry::Implications(pairs) => {
+                    if pairs.iter().find(|&&x| x == pair).is_some() {
+                        incompatible_pairs.push(current_pair);
+                    }
+                }
+            }
+
+            current_pair.0 += 1;
+            if current_pair.0 == current_pair.1 {
+                current_pair.1 += 1;
+                current_pair.0 = 0;
+            }
+        }
+
+        incompatible_pairs.iter().for_each(|&incompatible_pair| self.propagate_incompatibility(incompatible_pair));
+    }
+
+    fn add_incompatible_states(&mut self) {
+        let mut incompatible_pairs: Vec<(usize, usize)> = vec![];
+
+        let mut current_pair = (0, 1);
+        for entry in &self.entries {
+            match entry {
+                Entry::Incompatible => incompatible_pairs.push(current_pair),
+                _ => {}
+            };
+
+            current_pair.0 += 1;
+            if current_pair.0 == current_pair.1 {
+                current_pair.1 += 1;
+                current_pair.0 = 0;
+            }
+        }
+
+        incompatible_pairs.iter().for_each(|&pair| self.propagate_incompatibility(pair));
+    }
+
+    pub fn to_c_list(&mut self) {
+        self.add_incompatible_states();
     }
 }

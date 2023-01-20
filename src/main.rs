@@ -28,7 +28,7 @@ fn main() {
 
     flowtable.set_entry(4, 0, FlowTableValue::DontCare, FlowTableValue::DontCare);
     flowtable.set_entry(4, 1, FlowTableValue::DontCare, FlowTableValue::DontCare);
-    flowtable.set_entry(4, 2, FlowTableValue::Value(1), FlowTableValue::Value(1));
+    flowtable.set_entry(4, 2, FlowTableValue::Value(0), FlowTableValue::Value(1));
     flowtable.set_entry(4, 3, FlowTableValue::DontCare, FlowTableValue::DontCare);
 
     println!("original:");
