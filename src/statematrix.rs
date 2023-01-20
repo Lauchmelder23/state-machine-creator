@@ -1,4 +1,4 @@
-use std::thread::current;
+use std::{collections::HashSet, thread::current};
 
 use crate::flowtable::FlowTableValue;
 
@@ -103,7 +103,115 @@ impl StateMatrix {
         incompatible_pairs.iter().for_each(|&pair| self.propagate_incompatibility(pair));
     }
 
-    pub fn to_c_list(&mut self) {
+    fn to_c_list(&mut self) -> Vec<HashSet<usize>> {
         self.add_incompatible_states();
+
+        let mut c_list: Vec<HashSet<usize>> = Vec::new();
+
+        for k in (0..self.width).rev() {
+            for row in k+1..self.width+1 {
+                match &self.entries[row * (row - 1) / 2 + k] {
+                    Entry::Implications(pairs) => {
+                        for pair in pairs {
+                            let mut entry: HashSet<usize> = HashSet::new();
+                            entry.insert(k);
+                            entry.insert(row);
+
+                            c_list.push(entry);
+                        }
+                    },
+
+                    _ => {}
+                }
+
+            }
+
+            if !c_list.is_empty() {
+                break;
+            }
+        }
+
+        for k in (0..self.width - 1).rev() {
+            let mut valid_rows: HashSet<usize> = HashSet::new();
+
+            for row in k+1..self.width+1 {
+                match &self.entries[row * (row - 1) / 2 + k] {
+                    Entry::Implications(_) => {
+                        valid_rows.insert(row);
+                    },
+
+                    _ => {}
+                }
+            }
+
+            if valid_rows.is_empty() {
+                continue;
+            }
+
+            let mut to_remove: Vec<HashSet<usize>> = vec![];
+            let mut new_entries: Vec<HashSet<usize>> = vec![];
+            for entry in &c_list {
+                let mut intersection: HashSet<&usize> = valid_rows.intersection(entry).collect();
+
+                if intersection.len() > 1 {
+                    let mut current_col = HashSet::new();
+                    current_col.insert(k);
+
+                    intersection.extend(&current_col);
+
+                    new_entries.push(intersection.iter().map(|&&x| x).collect());
+                    to_remove.push(entry.clone());
+                }
+            }
+
+            c_list.retain(|x| !to_remove.contains(x));
+            c_list.append(&mut new_entries);
+
+            for row in k+1..self.width+1 {
+                match &self.entries[row * (row - 1) / 2 + k] {
+                    Entry::Implications(_) => {
+                        let mut entry: HashSet<usize> = HashSet::new();
+                        entry.insert(k);
+                        entry.insert(row);
+
+                        if !c_list.iter().any(|x| entry.is_subset(x)) {
+                            c_list.push(entry);
+                        }
+                    },
+
+                    _ => {}
+                }
+            }
+        }
+
+        for k in 0..self.width+1 {
+            let mut entry: HashSet<usize> = HashSet::new();
+            entry.insert(k);
+
+            if !c_list.iter().any(|x| entry.is_subset(x)) {
+                c_list.push(entry);
+            }
+        }
+
+        dbg!(c_list)
+    }
+
+    pub fn get_reduced_states(&mut self) {
+        let c_list = self.to_c_list();
+
+        let implications: Vec<(HashSet<usize>, HashSet<usize>)> = vec![];
+        for entry in &c_list {
+            let values: Vec<usize> = entry.iter().map(|&x| x).collect();
+
+            for first in &values {
+                for second in &values {
+                    if first == second {
+                        continue;
+                    }
+
+
+                }
+            }
+        }
     }
 }

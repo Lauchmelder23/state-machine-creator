@@ -106,8 +106,7 @@ impl FlowTable {
             }
         }
         
-        let c_list = matrix.to_c_list();
-        matrix = dbg!(matrix);
+        let reduced_states = matrix.get_reduced_states();
         todo!()
     }
 }
